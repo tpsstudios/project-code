@@ -1,105 +1,72 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
-using UnityEngine.UI;
 
 public class PlayerController : MonoBehaviour
 {
-    public static PlayerController instance;
-    public Rigidbody2D rb;
-    public float moveSpeed = 5f;
-    private Vector2 moveInput;
-    private Vector2 mouseInput;
-    public float mouseSensitiviy = 1f;
-    public Camera viewCam;
 
+    public float speed;            //Define the variable as public so we can change it in the GUI**
+    private Rigidbody2D rb2d;
+    Vector2 move;
+    public GameObject particleTrail;  //Define the variable as public so we can reference it in the GUI**
+    SpriteRenderer spriteRenderer;
+    Collider2D collider2d;
+    public bool isGrounded;
 
-    public Animator anim;
-    private int currentHealth;
-    public int maxHealth = 100;
-    private bool hasDied;
-    public Text healthText;
-
-    private void Awake()
+    void Awake()
     {
-        instance = this;
+        rb2d = GetComponent<Rigidbody2D>();  //Define the variable for rb2d at the beginning of the game**
+        collider2d = GetComponent<Collider2D>();
+        spriteRenderer = GetComponent<SpriteRenderer>();
     }
 
-    void Start()
-    {
-        currentHealth = maxHealth;
-        healthText.text = currentHealth.ToString() + "%";
-        
-    }
-
-    // Update is called once per frame
     void Update()
     {
-        if (!hasDied)
+
+        move.x = Input.GetAxisRaw("Horizontal");     //Records X-Axis Input**
+        Vector2 movement = new Vector2(move.x, 0);   //Sets Movement on X-Axis**
+        rb2d.AddForce(movement * speed);             //Apply Force from Movement * Speed**
+
+
+
+        if (move.x > 0.01f)                          //Flip the sprite of the player**
         {
-            //player movement
-            moveInput = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
-            Vector3 moveHorizontal = transform.up * -moveInput.x;
-            Vector3 moveVertical = transform.right * moveInput.y;
-            rb.velocity = (moveHorizontal + moveVertical) * moveSpeed;
 
-            //player view control
-            mouseInput = new Vector2(Input.GetAxisRaw("Mouse X"), Input.GetAxisRaw("Mouse Y")) * mouseSensitiviy;
-            transform.rotation = Quaternion.Euler(transform.rotation.eulerAngles.x, transform.rotation.eulerAngles.y, transform.rotation.eulerAngles.z - mouseInput.x);
-            viewCam.transform.localRotation = Quaternion.Euler(viewCam.transform.localRotation.eulerAngles + new Vector3(0f, mouseInput.y, 0f));
+            spriteRenderer.transform.Rotate(Vector3.back);
+        }
+        else if (move.x < -0.01f)
+        {
 
-            //player shooting
-            
-
-            if (moveInput != Vector2.zero)
-            {
-                //anim.SetBool("isMoving", true);
-            }
-            else
-            {
-                //anim.SetBool("isMoving", false);
-            }
-
-
-
+            spriteRenderer.transform.Rotate(Vector3.forward);
+        }
+        if (Input.GetKeyDown("space") && isGrounded == true)
+        {
+            rb2d.AddForce(new Vector2(0, 10), ForceMode2D.Impulse);
         }
     }
 
-    public void TakeDamage(int damageAmount)
+    void FixedUpdate()
     {
-        currentHealth -= damageAmount;
-        if (currentHealth <= 0)
-        {
+        
 
-            hasDied = true;
-            currentHealth = 0;
-            SceneManager.LoadScene("Startup");
 
-        }
-
-        healthText.text = currentHealth.ToString() + "%";
-
-        AudioController.instance.PlayerHurt();
     }
 
-    public void AddHealth(int healAmount)
+    void OnCollisionEnter2D(Collision2D theCollision)
     {
-        currentHealth += healAmount;
-        if (currentHealth > maxHealth)
+        if (theCollision.gameObject.name == "Tilemap")
         {
-            currentHealth = maxHealth;
+            isGrounded = true;
         }
-
-        healthText.text = currentHealth.ToString() + "%";
     }
 
-    private void OnTriggerEnter2D(Collider2D other)
+    //Set isGrounded to False, if player leaves the Tilemap
+    void OnCollisionExit2D(Collision2D theCollision)
     {
-        if (other.tag == "Weapon")
+        if (theCollision.gameObject.name == "Tilemap")
         {
-            AudioController.instance.PlayWeaponPickup();
-
+            isGrounded = false;
         }
     }
+
 }
